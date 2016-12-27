@@ -1,0 +1,123 @@
+DELIMITER $$
+
+USE `qresolve`$$
+
+DROP PROCEDURE IF EXISTS `spsAgentAlignment`$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `spsAgentAlignment`(IN inAgentId VARCHAR(30),IN inSDate VARCHAR(30),IN inEDate VARCHAR(30))
+BEGIN
+	DECLARE v1 INT DEFAULT 1;
+	DECLARE locagentID VARCHAR(50);
+	DECLARE locManagerID VARCHAR(50);
+	DECLARE locPosition VARCHAR(50);
+	DECLARE cntLoop INT(11);
+	DECLARE i INT;
+	
+	DROP TEMPORARY TABLE IF EXISTS aaTempAgentList;
+	CREATE TEMPORARY TABLE aaTempAgentList
+	SELECT inAgentId AS allagentids, inAgentId AS managerid, 1 AS POSITION;
+	ALTER TABLE aaTempAgentList
+	ADD INDEX `Idx_allagentids` (`allagentids`),
+	ADD INDEX `Idx_POSITION` (`POSITION` ASC);
+	
+	DROP TEMPORARY TABLE IF EXISTS aaTempAgentList1;
+	CREATE TEMPORARY TABLE aaTempAgentList1
+	SELECT inAgentId AS allagentids, inAgentId AS managerid, 1 AS POSITION;
+	ALTER TABLE aaTempAgentList1
+	ADD INDEX `Idx_allagentids1` (`allagentids`),
+	ADD INDEX `Idx_POSITION1` (`POSITION` ASC);
+	
+	DROP TEMPORARY TABLE IF EXISTS aaTempAgentList2;
+	CREATE TEMPORARY TABLE aaTempAgentList2
+	SELECT inAgentId AS allagentids, inAgentId AS managerid, 1 AS POSITION;
+	ALTER TABLE aaTempAgentList2
+	ADD INDEX `Idx_allagentids2` (`allagentids`),
+	ADD INDEX `Idx_POSITION2` (`POSITION` ASC);
+	
+	WHILE (SELECT EXISTS (SELECT * FROM Reportdb.agent_alignment_master WHERE inSDate BETWEEN eff_from_date AND eff_to_date AND managerid IN (SELECT allagentids FROM aaTempAgentList1) AND agentid NOT IN (SELECT allagentids FROM aaTempAgentList2))) DO
+		SET v1 = v1 + 1 ;
+		INSERT INTO aaTempAgentList
+		SELECT agentid,managerid,v1 FROM Reportdb.agent_alignment_master WHERE inSDate BETWEEN eff_from_date AND eff_to_date AND managerid IN (SELECT DISTINCT allagentids FROM aaTempAgentList1) AND agentid NOT IN (SELECT DISTINCT allagentids FROM aaTempAgentList2);	
+		INSERT INTO aaTempAgentList1 SELECT * FROM aaTempAgentList;
+		INSERT INTO aaTempAgentList2 SELECT * FROM aaTempAgentList;
+	END WHILE;
+	
+	
+	TRUNCATE TABLE aaTempAgentList1;
+	TRUNCATE TABLE aaTempAgentList2;
+	
+	DROP TEMPORARY TABLE IF EXISTS aaTempAgentList3;
+	CREATE TEMPORARY TABLE aaTempAgentList3
+	SELECT * FROM  aaTempAgentList;
+	ALTER TABLE aaTempAgentList3
+	ADD INDEX `Idx_allagentids3` (`allagentids`),
+	ADD INDEX `Idx_POSITION3` (`POSITION` ASC);
+	
+	DROP TEMPORARY TABLE IF EXISTS aaTempAgentList1;
+	CREATE TEMPORARY TABLE aaTempAgentList1
+	SELECT * FROM  aaTempAgentList WHERE allagentids IN (SELECT managerid FROM aaTempAgentList3);
+	ALTER TABLE aaTempAgentList1
+	ADD INDEX `Idx_allagentids1` (`allagentids`),
+	ADD INDEX `Idx_POSITION1` (`POSITION` ASC);
+	
+	DROP TEMPORARY TABLE IF EXISTS aaTempAgentList2;
+	CREATE TEMPORARY TABLE aaTempAgentList2
+	SELECT * FROM  aaTempAgentList WHERE allagentids NOT IN (SELECT managerid FROM aaTempAgentList3);
+	ALTER TABLE aaTempAgentList2
+	ADD INDEX `Idx_allagentids2` (`allagentids`),
+	ADD INDEX `Idx_POSITION2` (`POSITION` ASC);
+	
+	DROP TEMPORARY TABLE IF EXISTS aaTempAgentRepeatReport;
+	CALL spsRepeatReportAlignment(inAgentId, inSDate, inEDate, @Close, @Cancel, @outActive, @Auto_Close, @TotalCases, @ExcludingActive, @Repeats, @RepeatEx, @RepeatPer, @Proactive, @Reactive);
+	CREATE TEMPORARY TABLE aaTempAgentRepeatReport
+	SELECT inAgentId AS agentID, inAgentId AS managerid, 1 AS rPosition, @Close AS rClose, @Cancel AS rCancel, @outActive AS rActive, @Auto_Close AS rAuto_Close, @TotalCases AS rTotalCases, @ExcludingActive AS rExcludingActive, @Repeats AS rRepeats, @RepeatEx AS rRepeatEx, @RepeatPer AS rRepeatPer, @Proactive AS rProactive, @Reactive AS rReactive;
+	ALTER TABLE aaTempAgentRepeatReport
+	ADD INDEX `Idx_agentID` (`agentID`),
+	ADD INDEX `Idx_rPosition` (`rPosition` ASC);
+	
+	SELECT COUNT(*) INTO cntLoop FROM aaTempAgentList1;
+	SET i=1;
+	loop1: WHILE i<cntLoop DO
+		SELECT allagentids, managerid, POSITION INTO locagentID, locManagerID, locPosition FROM aaTempAgentList1 ORDER BY POSITION ASC LIMIT i, 1;
+		CALL spsRepeatReportAlignment(locagentID, inSDate, inEDate, @Close, @Cancel,@outActive ,@Auto_Close ,@TotalCases ,@ExcludingActive ,@Repeats , @RepeatEx, @RepeatPer, @Proactive, @Reactive);
+		INSERT INTO aaTempAgentRepeatReport
+		SELECT locagentID AS agentID, locManagerID AS managerid, locPosition AS rPosition, @Close AS rClose, @Cancel AS rCancel, @outActive AS rActive, @Auto_Close AS rAuto_Close, @TotalCases AS rTotalCases, @ExcludingActive AS rExcludingActive, @Repeats AS rRepeats, @RepeatEx AS rRepeatEx, @RepeatPer AS rRepeatPer, @Proactive AS rProactive, @Reactive AS rReactive;
+		SET i=i+1;
+	END WHILE loop1; 
+	      
+	INSERT INTO aaTempAgentRepeatReport
+	SELECT allagentids AS agentID, managerid, POSITION AS rPosition, 
+	SUM(CASE WHEN (t.case_status='Close') THEN 1 ELSE 0 END) AS rClose,
+	SUM(CASE WHEN (t.case_status='Cancel') THEN 1 ELSE 0 END) AS rCancel,
+	SUM(CASE WHEN (t.case_status='Active') THEN 1 ELSE 0 END) AS rActive,
+	SUM(CASE WHEN (t.case_status='Auto_Close') THEN 1 ELSE 0 END) AS rAuto_Close,
+	(SUM(CASE WHEN (t.case_status='Close') THEN 1 ELSE 0 END)+
+	SUM(CASE WHEN (t.case_status='Cancel') THEN 1 ELSE 0 END)+
+	SUM(CASE WHEN (t.case_status='Auto_Close') THEN 1 ELSE 0 END)+
+	SUM(CASE WHEN (t.case_status='Active') THEN 1 ELSE 0 END)) AS rTotalCases,
+	(SUM(CASE WHEN (t.case_status='Close') THEN 1 ELSE 0 END)+	
+	SUM(CASE WHEN (t.case_status='Auto_Close') THEN 1 ELSE 0 END)) AS rExcludingActive,
+	(CASE WHEN SUM(t.case_repeat) IS NULL THEN 0 ELSE SUM(t.case_repeat) END) AS rRepeats,
+	(SUM(CASE WHEN (t.case_status='Active') THEN 1 ELSE 0 END)+
+	SUM(CASE WHEN (t.case_status='Cancel') THEN 1 ELSE 0 END)) AS rRepeatEx,
+	(CASE WHEN CONCAT(ROUND(SUM(t.case_repeat)*100/(SUM(CASE WHEN (t.case_status='Close') THEN 1 ELSE 0 END)+
+	SUM(CASE WHEN (t.case_status='Auto_Close') THEN 1 ELSE 0 END)),2),'%') IS NULL THEN 0 
+	ELSE
+	CONCAT(ROUND(SUM(t.case_repeat)*100/(SUM(CASE WHEN (t.case_status='Close') THEN 1 ELSE 0 END)+
+	SUM(CASE WHEN (t.case_status='Auto_Close') THEN 1 ELSE 0 END)),2),'%') END) AS rRepeatPer,
+	SUM(CASE WHEN (t.proactive_reactive='proactive') THEN 1 ELSE 0 END) AS rProactive,
+	SUM(CASE WHEN (t.proactive_reactive='reactive') THEN 1 ELSE 0 END) AS rReactive	
+	FROM 
+	(
+	SELECT am.allagentids, am.managerid, am.POSITION, ci.case_status, ci.lastmodifyby, ci.case_repeat, ci.proactive_reactive FROM aaTempAgentList2 am
+	LEFT JOIN case_info ci ON  am.allagentids = ci.lastmodifyby AND ci.lastmodifyon BETWEEN inSDate AND inEDate 
+	) AS  t 
+	GROUP BY allagentids,managerid ORDER BY t.POSITION ASC;
+	
+	SELECT am.agentID, am.managerid, am.rPosition, am.rClose, am.rCancel, am.rActive, am.rAuto_Close, am.rTotalCases, am.rExcludingActive, am.rRepeats, am.rRepeatEx, am.rRepeatPer, am.rProactive, am.rReactive, ad.name 
+	FROM aaTempAgentRepeatReport am
+	LEFT JOIN adminuser ad ON am.agentID = ad.username ORDER BY am.rPosition ASC;
+		
+END$$
+
+DELIMITER ;
