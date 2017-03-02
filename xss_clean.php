@@ -84,3 +84,78 @@ function sanitize($input) {
   /*$_POST = sanitize($_POST);
   $_GET  = sanitize($_GET);*/
 ?>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<title>Test</title>
+	<script src="jquery-3.1.1.js" type="text/javascript"></script>
+	<script src="jquery.validate.min.js" type="text/javascript"></script>
+	<script type="text/javascript">
+	$(document).ready(function () {
+		$('#signup').validate({ 		
+			rules: {
+				email: {
+					required: true,
+					email: true,
+					remote: {
+						url: "index.php",
+						type: "post",
+						data:
+						{
+							emailid: function()
+							{
+								return $('#signup :input[name="email"]').val();
+							}
+						}
+					}				
+				}
+			},
+			messages: {
+				email: {
+					required: "Please enter your email address.",
+					email: "Please enter a valid email address.",
+					remote: "Email already in use!"
+				}
+			},
+			submitHandler: function(form) {
+				form.submit();
+			}
+		});
+	});
+	/**/
+	</script>
+</head>
+<body>
+<form method="post" id="signup" action="index.php" >
+    <div class="form-group">
+    <label for="email">Email address:</label>
+        <input type="text" name="email" id="email">
+    </div>
+	<div class="form-group">
+        <input type="submit" name="submit" id="submit" value="Submit">
+    </div>
+</form>
+<?php 
+$a_data = array();
+try {
+	$sql = 'SELECT * FROM adminuser WHERE roleasdsa = ?';
+	$stmt = $conn->prepare($sql);
+	if($stmt === false) {
+		throw new Exception('Wrong SQL: (' . $sql . ') Error: ' . $conn->errno . ' ' . $conn->error);
+	}
+	$category_id = 2;
+	$stmt->bind_param('i', $category_id);
+	$stmt->execute();
+	$rs=$stmt->get_result();
+	$a_data = $rs->fetch_all(MYSQLI_ASSOC);
+} catch (Exception $e) {
+   echo $e->getMessage().'lkdjfgkj';
+}
+echo '<pre>';
+print_r($a_data);
+echo '</pre>';
+?>
+</body>
+</html>
