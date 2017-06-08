@@ -1,0 +1,1 @@
+http%3A%2F%2Fwww.jitendrazaa.com%2Fblog%2Fjava%2Fgenerating-executable-jar-file-with-all-dependencies-and-libraries-in-single-jar-using-netbeans-and-eclipse%2F
