@@ -1,0 +1,13 @@
+https://dba.stackexchange.com/questions/27015/database-design-for-magazine-website
+
+https://stackoverflow.com/questions/13653618/news-database-design
+
+https://github.com/denisovlev/newsportal/blob/master/db/schema.rb
+
+http://www.cs.bilkent.edu.tr/~canf/bilir_web/theses/cagdasOcalan%20Thesis.pdf
+
+http://ethesis.nitrkl.ac.in/4424/1/Design_of_Web_Based_Newspaper.pdf
+
+https://www.freeprojectz.com/entity-relationship/news-portal-system-er-diagram
+
+https://github.com/zooboole/How-to-create-a-simple-news-web-site
