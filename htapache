@@ -1,0 +1,2 @@
+Apache directives are a set of rules which define how your server should run, number of clients that can access your server, etc. 
+you can change them by editing the httpd.conf and related files to meet your requirements
