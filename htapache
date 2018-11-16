@@ -1,2 +1,14 @@
 Apache directives are a set of rules which define how your server should run, number of clients that can access your server, etc. 
 you can change them by editing the httpd.conf and related files to meet your requirements
+
+What happens is that the SQL statement you pass to prepare is parsed and compiled by the database server. 
+By specifying parameters (either a ? or a named parameter like :name in the example above) you tell the database engine 
+where you want to filter on. Then when you call execute, the prepared statement is combined with the parameter values you specify.
+
+The important thing here is that the parameter values are combined with the compiled statement, not an SQL string. 
+SQL injection works by tricking the script into including malicious strings when it creates SQL to send to the database. 
+So by sending the actual SQL separately from the parameters, you limit the risk of ending up with something you didn't intend. 
+Any parameters you send when using a prepared statement will just be treated as strings 
+(although the database engine may do some optimization so parameters may end up as numbers too, of course). 
+In the example above, if the $name variable contains 'Sarah'; DELETE FROM employees the result would simply be a search for 
+the string "'Sarah'; DELETE FROM employees", and you will not end up with an empty table.
