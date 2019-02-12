@@ -3,5 +3,6 @@ https://laravel.com/docs/5.2/mail
 https://code.tutsplus.com/tutorials/how-to-send-emails-in-laravel--cms-30046
 https://github.com/scotch-io/laravel-emails/blob/master/resources/views/emails/send.blade.php
 
-
 http://jasonwatmore.com/post/2018/05/16/angular-6-user-registration-and-login-example-tutorial#login-component-ts
+
+https://github.com/almasaeed2010/AdminLTE/issues/1570
