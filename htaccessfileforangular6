@@ -6,3 +6,11 @@
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule . index.html [L]
 </IfModule>
+
+http://10.173.32.192:8080/api/v1/user/login
+
+ng build --prod --output-path docs --base-href /ezr/oms/
+
+"device-type": "Web",
+"ver": "1.0",
+"auth-token": "123",
